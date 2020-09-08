@@ -1,139 +1,61 @@
-from torch import nn
-from torch.nn import functional as F
+import torch.nn.functional as F
+import torch.nn as nn
+import torch
 
 
-class _NonLocalBlockND(nn.Module):
-    def __init__(self, in_channels, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True):
-        """
-        :param in_channels:
-        :param inter_channels:
-        :param dimension:
-        :param sub_sample:
-        :param bn_layer:
-        """
+class NonLocalBlock(nn.Module):
+    def __init__(self, in_plane, out_plane, inner_plane):
+        super(NonLocalBlock, self).__init__()
+        self.in_plane = in_plane
+        self.out_plane = out_plane
+        self.inner_plane = inner_plane
 
-        super(_NonLocalBlockND, self).__init__()
+        self.theta = nn.Conv2d(in_plane, inner_plane, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
+        self.phi = nn.Conv2d(in_plane, inner_plane, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
+        self.g = nn.Conv2d(in_plane, inner_plane, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
 
-        assert dimension in [1, 2, 3]
+        self.maxpool = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(0, 0))
 
-        self.dimension = dimension
-        self.sub_sample = sub_sample
+        self.out = nn.Conv2d(inner_plane, out_plane, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
+        self.bn = nn.BatchNorm2d(out_plane)
 
-        self.in_channels = in_channels
-        self.inter_channels = inter_channels
+    def forward(self, x):
+        residual = x
 
-        if self.inter_channels is None:
-            self.inter_channels = in_channels // 2
-            if self.inter_channels == 0:
-                self.inter_channels = 1
+        batch_size = x.shape[0]
+        mp = self.maxpool(x)
+        theta = self.theta(x)
+        phi = self.phi(mp)
+        g = self.g(mp)
 
-        if dimension == 3:
-            conv_nd = nn.Conv3d
-            max_pool_layer = nn.MaxPool3d(kernel_size=(1, 2, 2))
-            bn = nn.BatchNorm3d
-        elif dimension == 2:
-            conv_nd = nn.Conv2d
-            max_pool_layer = nn.MaxPool2d(kernel_size=(2, 2))
-            bn = nn.BatchNorm2d
-        else:
-            conv_nd = nn.Conv1d
-            max_pool_layer = nn.MaxPool1d(kernel_size=2)
-            bn = nn.BatchNorm1d
+        theta_shape = theta.shape
+        theta = theta.view(batch_size, self.inner_plane, -1)
+        phi = phi.view(batch_size, self.inner_plane, -1)
+        g = g.view(batch_size, self.inner_plane, -1)
 
-        self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                         kernel_size=1, stride=1, padding=0)
+        theta_phi = torch.bmm(theta.transpose(1, 2), phi)  # (8, 1024, 784) * (8, 1024, 784) => (8, 784, 784)
+        theta_phi_sc = theta_phi * (self.inner_plane ** -.5)
+        p = F.softmax(theta_phi_sc, dim=-1)
 
-        if bn_layer:
-            self.W = nn.Sequential(
-                conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                        kernel_size=1, stride=1, padding=0),
-                bn(self.in_channels)
-            )
-            nn.init.constant_(self.W[1].weight, 0)
-            nn.init.constant_(self.W[1].bias, 0)
-        else:
-            self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                             kernel_size=1, stride=1, padding=0)
-            nn.init.constant_(self.W.weight, 0)
-            nn.init.constant_(self.W.bias, 0)
+        t = torch.bmm(g, p.transpose(1, 2))
+        t = t.view(theta_shape)
 
-        self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                             kernel_size=1, stride=1, padding=0)
-        self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                           kernel_size=1, stride=1, padding=0)
+        out = self.out(t)
+        out = self.bn(out)
 
-        if sub_sample:
-            self.g = nn.Sequential(self.g, max_pool_layer)
-            self.phi = nn.Sequential(self.phi, max_pool_layer)
+        out = out + residual
+        return out
 
-    def forward(self, x, return_nl_map=False):
-        """
-        :param x: (b, c, t, h, w)
-        :param return_nl_map: if True return z, nl_map, else only return z.
-        :return:
-        """
+    def zero_initialize(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.zeros_(m.weight)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.zeros_(m.weight)
 
-        batch_size = x.size(0)
-
-        g_x = self.g(x).view(batch_size, self.inter_channels, -1)
-        g_x = g_x.permute(0, 2, 1)
-
-        theta_x = self.theta(x).view(batch_size, self.inter_channels, -1)
-        theta_x = theta_x.permute(0, 2, 1)
-        phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
-        f = torch.matmul(theta_x, phi_x)
-        f_div_C = F.softmax(f, dim=-1)
-
-        y = torch.matmul(f_div_C, g_x)
-        y = y.permute(0, 2, 1).contiguous()
-        y = y.view(batch_size, self.inter_channels, *x.size()[2:])
-        W_y = self.W(y)
-        z = W_y + x
-
-        if return_nl_map:
-            return z, f_div_C
-        return z
-
-
-class NONLocalBlock1D(_NonLocalBlockND):
-    def __init__(self, in_channels, inter_channels=None, sub_sample=True, bn_layer=True):
-        super(NONLocalBlock1D, self).__init__(in_channels,
-                                              inter_channels=inter_channels,
-                                              dimension=1, sub_sample=sub_sample,
-                                              bn_layer=bn_layer)
-
-
-class NONLocalBlock2D(_NonLocalBlockND):
-    def __init__(self, in_channels, inter_channels=None, sub_sample=True, bn_layer=True):
-        super(NONLocalBlock2D, self).__init__(in_channels,
-                                              inter_channels=inter_channels,
-                                              dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer,)
-
-
-class NONLocalBlock3D(_NonLocalBlockND):
-    def __init__(self, in_channels, inter_channels=None, sub_sample=True, bn_layer=True):
-        super(NONLocalBlock3D, self).__init__(in_channels,
-                                              inter_channels=inter_channels,
-                                              dimension=3, sub_sample=sub_sample,
-                                              bn_layer=bn_layer,)
-
-
-if __name__ == '__main__':
-    import torch
-
-    for (sub_sample_, bn_layer_) in [(True, True), (False, False), (True, False), (False, True)]:
-        img = torch.zeros(2, 3, 20)
-        net = NONLocalBlock1D(3, sub_sample=sub_sample_, bn_layer=bn_layer_)
-        out = net(img)
-        print(out.size())
-
-        img = torch.zeros(2, 3, 20, 20)
-        net = NONLocalBlock2D(3, sub_sample=sub_sample_, bn_layer=bn_layer_)
-        out = net(img)
-        print(out.size())
-
-        img = torch.randn(2, 3, 8, 20, 20)
-        net = NONLocalBlock3D(3, sub_sample=sub_sample_, bn_layer=bn_layer_)
-        out = net(img)
-        print(out.size())
+    def normal_initialize(self, std):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.normal_(m.weight, std=std)  # conv_weight_std=0.01
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.normal_(m.weight, std=std)  # conv_weight_std=0.01
