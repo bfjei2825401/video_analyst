@@ -88,7 +88,7 @@ train:
       task_model:
         name: "SiamAttentionCRTrack"
         SiamAttentionCRTrack:
-          pretrain_model_path: "models/siamfcpp/siamfcpp-googlenet-vot-md5_f2680ba074213ee39d82fcb84533a1a6.pkl"
+          pretrain_model_path: "models/siamfcpp/siamfcpp-googlenet-vot-md5_e14e9b6c82799602d777fd21a081c907.pkl"
           attention_down_num: 3
           attention_down_k_size: [3, 3, 2]
           attention_down_stride: [1, 1, 1]
@@ -101,7 +101,7 @@ train:
       exp_save: *TRAIN_SAVE
       num_epochs: 20
       minibatch: &MINIBATCH 32  # 256
-      num_workers: 16 # 24
+      num_workers: 12 # 24
       nr_image_per_epoch: &NR_IMAGE_PER_EPOCH 150000
       datapipeline:
         name: "RegularDatapipeline"

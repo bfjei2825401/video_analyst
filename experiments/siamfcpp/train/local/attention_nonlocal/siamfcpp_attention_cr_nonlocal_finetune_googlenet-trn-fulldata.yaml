@@ -1,6 +1,6 @@
 test:
   track:
-    exp_name: &TEST_NAME "siamfcpp_attention_cr_finetune_googlenet-fulldata"
+    exp_name: &TEST_NAME "siamfcpp_attention_cr_nonlocal_finetune_googlenet-fulldata"
     exp_save: &TEST_SAVE "logs"
     model:
       backbone:
@@ -22,7 +22,7 @@ test:
       task_model:
         name: "SiamAttentionCRTrack"
         SiamAttentionCRTrack:
-          pretrain_model_path: "snapshots/siamfcpp_attention_cr_finetune_googlenet-fulldata/epoch-19.pkl"
+          pretrain_model_path: "snapshots/siamfcpp_attention_cr_nonlocal_finetune_googlenet-fulldata/epoch-19.pkl"
           attention_down_num: 3
           attention_down_k_size: [3, 3, 2]
           attention_down_stride: [1, 1, 1]
@@ -53,7 +53,7 @@ test:
         subsets: ["test"]  # (train_test|test)
 train:
   track:
-    exp_name: &TRAIN_NAME "siamfcpp_attention_cr_finetune_googlenet-fulldata"
+    exp_name: &TRAIN_NAME "siamfcpp_attention_cr_nonlocal_finetune_googlenet-fulldata"
     exp_save: &TRAIN_SAVE "snapshots"
     model:
       backbone:
@@ -88,7 +88,7 @@ train:
       task_model:
         name: "SiamAttentionCRTrack"
         SiamAttentionCRTrack:
-          pretrain_model_path: "models/siamfcpp/siamfcpp-googlenet-vot-md5_f2680ba074213ee39d82fcb84533a1a6.pkl"
+          pretrain_model_path: "models/siamfcpp/siamfcpp-googlenet-vot-md5_e14e9b6c82799602d777fd21a081c907.pkl"
           attention_down_num: 3
           attention_down_k_size: [3, 3, 2]
           attention_down_stride: [1, 1, 1]
@@ -100,8 +100,8 @@ train:
       exp_name: *TRAIN_NAME
       exp_save: *TRAIN_SAVE
       num_epochs: 20
-      minibatch: &MINIBATCH 36  # 256
-      num_workers: 16 # 24
+      minibatch: &MINIBATCH 32  # 256
+      num_workers: 12 # 24
       nr_image_per_epoch: &NR_IMAGE_PER_EPOCH 150000
       datapipeline:
         name: "RegularDatapipeline"
