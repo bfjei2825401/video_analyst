@@ -2,7 +2,9 @@
 
 ```bash
 docker build -t video_analyst/siamfcpp:vot-eval -f ./Dockerfile ./
-docker run -itd --name vot-eval --network host --ipc host --gpus all -v /home/$USER:/home/$USER video_analyst/siamfcpp:vot-eval
+# docker run -itd --name vot-eval --network host --ipc host --gpus all -v /home/$USER:/home/$USER video_analyst/siamfcpp:vot-eval
+# add dataset directory mapping
+docker run -itd --name vot-eval --network host --ipc host --gpus all -v /home/$USER:/home/$USER -v /mnt/dataset/:/mnt/dataset video_analyst/siamfcpp:vot-eval
 docker exec -it vot-eval bash
 ```
 
