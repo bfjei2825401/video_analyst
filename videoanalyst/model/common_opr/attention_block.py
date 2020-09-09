@@ -56,7 +56,7 @@ class ResidualAttentionLayer(nn.Module):
             x = getattr(self, 'attention_up_conv_%d' % (i + 1))(x)
         return (1.0 + x) * feature
 
-    def initialize(self, std):
+    def initialize_normal(self, std):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight, std=std)  # conv_weight_std=0.01
