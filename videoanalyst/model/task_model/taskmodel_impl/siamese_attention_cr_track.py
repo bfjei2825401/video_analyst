@@ -211,7 +211,7 @@ class SiamAttentionCRTrack(ModuleBase):
         attention_list = [self.c_attention, self.r_attention]
         for ith in range(len(attention_list)):
             attention = attention_list[ith]
-            attention.initialize(conv_weight_std)
+            attention.initialize_normal(conv_weight_std)
 
     def _make_attention(self):
         head_width = self._hyper_params['head_width']
@@ -223,12 +223,12 @@ class SiamAttentionCRTrack(ModuleBase):
         up_stride = self._hyper_params['attention_up_stride']
         logger.info("attention layer num: {}, kernel size: {}".format(down_num, down_k_size))
         self.c_attention = ResidualAttentionLayer(head_width,
-                                                down_k_size=down_k_size,
-                                                down_stride=down_stride,
-                                                up_k_size=up_k_size,
-                                                up_stride=up_stride,
-                                                down_num=down_num,
-                                                up_num=up_num)
+                                                  down_k_size=down_k_size,
+                                                  down_stride=down_stride,
+                                                  up_k_size=up_k_size,
+                                                  up_stride=up_stride,
+                                                  down_num=down_num,
+                                                  up_num=up_num)
         self.r_attention = ResidualAttentionLayer(head_width,
                                                   down_k_size=down_k_size,
                                                   down_stride=down_stride,
