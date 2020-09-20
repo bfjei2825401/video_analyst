@@ -135,4 +135,12 @@ COPY ./requirements.txt /root/
 RUN $PIP_INSTALL -r /root/requirements.txt && \
     echo "ended."
 
+# add deformable convolution network lib
+RUN $GIT_CLONE https://github.com/CharlesShang/DCNv2.git ~/DCNv2 && \
+    cd ~/DCNv2 && \
+    chmod +x make.sh && \
+    ./make.sh
+# add user for docker container
+RUN groupadd -r appuser && useradd -u 1000 -r -g appuser appuser
+
 # TODO: only wget & install: https://github.com/MARMOTatZJU/video_analyst/blob/dev/requirements.txt
