@@ -33,20 +33,17 @@ test:
         penalty_k: 0.04
         num_conv3x3: 2
     tester:
-      names: ["GOT10kTester",] # (VOTTester|GOT10kTester|LaSOTTester)
+      names: ["VOTTester", "TrackingNetTester"] # (VOTTester|GOT10kTester|LaSOTTester)
       VOTTester:
         exp_name: *TEST_NAME
         exp_save: *TEST_SAVE
         device_num: 1
         dataset_names: ["VOT2018"]
-      GOT10kTester:
+      TrackingNetTester:
         exp_name: *TEST_NAME
         exp_save: *TEST_SAVE
-        subsets: ["val", "test"]  # (val|test)
-      LaSOTTester:
-        exp_name: *TEST_NAME
-        exp_save: *TEST_SAVE
-        subsets: ["test"]  # (train_test|test)
+        device_num: 1
+        subsets: ["test"]  # (train|test|train0,1,...)
 train:
   track:
     exp_name: &TRAIN_NAME "siamfcpp_sk_finetune_googlenet-fulldata"
@@ -90,14 +87,15 @@ train:
           pretrain_model_path: "models/siamfcpp/siamfcpp-googlenet-vot-md5_f2680ba074213ee39d82fcb84533a1a6.pkl"
           kernel_num: 2
           discount: 4
-    # ==================================================
+# ==================================================
     data:
       exp_name: *TRAIN_NAME
       exp_save: *TRAIN_SAVE
-      num_epochs: 20
-      minibatch: &MINIBATCH 32  # 256
-      num_workers: 12 # 24
+      num_epochs: &NUM_EPOCHS 20
+      minibatch: &MINIBATCH 36
+      num_workers: 16 # 32
       nr_image_per_epoch: &NR_IMAGE_PER_EPOCH 150000
+      pin_memory: false
       datapipeline:
         name: "RegularDatapipeline"
       sampler:
@@ -110,9 +108,9 @@ train:
               "TrackingNetDataset",
               "COCODataset",
               "GOT10kDataset",
-              "LaSOTDataset",
               "DETDataset",
               "VIDDataset",
+              "LaSOTDataset",
               ]
             GOT10kDataset: &GOT10KDATASET_CFG
               ratio: 0.2
@@ -169,7 +167,7 @@ train:
       RegularTrainer:
         exp_name: *TRAIN_NAME
         exp_save: *TRAIN_SAVE
-        max_epoch: 20
+        max_epoch: *NUM_EPOCHS
         minibatch: *MINIBATCH
         nr_image_per_epoch: *NR_IMAGE_PER_EPOCH
         snapshot: ""
@@ -181,7 +179,7 @@ train:
           exp_name: *TRAIN_NAME
           exp_save: *TRAIN_SAVE
 
-    # ==================================================
+# ==================================================
     optim:
       optimizer:
         name: "SGD"
@@ -192,55 +190,48 @@ train:
           minibatch: *MINIBATCH
           nr_image_per_epoch: *NR_IMAGE_PER_EPOCH
           lr_policy:
-            - >
-              {
-              "name": "LinearLR",
-              "start_lr": 0.000001,
-              "end_lr": 0.04,
-              "max_epoch": 1
-              }
-            - >
-              {
-              "name": "CosineLR",
-              "start_lr": 0.04,
-              "end_lr": 0.000001,
-              "max_epoch": 19
-              }
+          - >
+            {
+            "name": "CosineLR",
+            "start_lr": 0.0008,
+            "end_lr": 0.000001,
+            "max_epoch": 19
+            }
           lr_multiplier:
-            - >
-              {
-              "name": "backbone",
-              "regex": "basemodel",
-              "ratio": 0.1
-              }
-            - >
-              {
-              "name": "other",
-              "regex": "^((?!basemodel).)*$",
-              "ratio": 1
-              }
+          - >
+            {
+            "name": "backbone",
+            "regex": "basemodel",
+            "ratio": 0.1
+            }
+          - >
+            {
+            "name": "other",
+            "regex": "^((?!basemodel).)*$",
+            "ratio": 1
+            }
       grad_modifier:
         name: "DynamicFreezer"
         DynamicFreezer:
           schedule:
-            - >
-              {
-              "name": "isConv",
-              "regex": "basemodel.*\\.conv\\.",
-              "epoch": 0,
-              "freezed": true
-              }
-            - >
-              {
-              "name": "isConvStage4",
-              "regex": "basemodel\\.Mixed_6.*\\.conv\\.",
-              "epoch": 10,
-              "freezed": false
-              }
-            - >
-              {
-              "name": "isConvStage3",
-              "regex": "basemodel\\.Mixed_5.*\\.conv\\.",
-              "epoch": 10,
-              "freezed": false
-              }
+          - >
+            {
+            "name": "isConv",
+            "regex": "basemodel.*\\.conv\\.",
+            "epoch": 0,
+            "freezed": false
+            }
+          - >
+            {
+            "name": "isConvStage4",
+            "regex": "basemodel\\.Mixed_6.*\\.conv\\.",
+            "epoch": 10,
+            "freezed": false
+            }
+          - >
+            {
+            "name": "isConvStage3",
+            "regex": "basemodel\\.Mixed_5.*\\.conv\\.",
+            "epoch": 10,
+            "freezed": false
+            }
