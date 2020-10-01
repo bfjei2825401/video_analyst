@@ -1,6 +1,6 @@
 test:
   track:
-    exp_name: &TEST_NAME "siamfcpp_local_finetune_googlenet-fulldata"
+    exp_name: &TEST_NAME "siamfcpp_local_finetune_googlenet"
     exp_save: &TEST_SAVE "logs"
     model:
       backbone:
@@ -21,7 +21,7 @@ test:
       task_model:
         name: "SiamTrack"
         SiamTrack:
-          pretrain_model_path: "snapshots/siamfcpp_local_finetune_googlenet-fulldata/epoch-0.pkl"
+          pretrain_model_path: "snapshots/siamfcpp_local_finetune_googlenet/epoch-19.pkl"
     pipeline:
       name: "SiamFCppTracker"
       SiamFCppTracker:
