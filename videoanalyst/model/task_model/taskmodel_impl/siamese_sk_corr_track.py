@@ -116,9 +116,6 @@ class SiamSKCorrTrack(ModuleBase):
                 # feature adjustment
                 c_x = self.c_x(f_x)
                 r_x = self.r_x(f_x)
-                # search SK layer
-                c_x = self.sk_conv_c_x(c_x)
-                r_x = self.sk_conv_r_x(r_x)
             elif len(args) == 4:
                 # c_x, r_x already computed
                 c_z_k, r_z_k, c_x, r_x = args
