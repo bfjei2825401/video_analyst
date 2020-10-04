@@ -79,6 +79,18 @@ class SKConv(nn.Module):
             torch.nn.init.normal_(fc.weight,
                                   std=std)
 
+    def zero_initialize(self):
+        for conv in self.convs:
+            # Conv2d Zero Initialization
+            torch.nn.init.zeros_(conv[0].weight)
+            # BatchNorm2d Zero Initialization
+            nn.init.constant_(conv[1].weight, 1)
+            nn.init.constant_(conv[1].bias, 0)
+
+        for fc in self.fcs:
+            torch.nn.init.constant_(fc.weight, 1)
+            torch.nn.init.constant_(fc.bias, 0)
+
 
 # SKConv(self.channels, 2, 8, 2),
 # sk = SKConv(64,2,8,2),
