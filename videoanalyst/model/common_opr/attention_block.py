@@ -60,5 +60,7 @@ class ResidualAttentionLayer(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight, std=std)  # conv_weight_std=0.01
+                nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.ConvTranspose2d):
                 nn.init.normal_(m.weight, std=std)  # conv_weight_std=0.01
+                nn.init.constant_(m.bias, 0)
