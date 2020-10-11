@@ -1,0 +1,45 @@
+test:
+  track:
+    exp_name: &TEST_NAME "siamfcpp_attention2_corr_finetune_freeze_googlenet-fulldata"
+    exp_save: &TEST_SAVE "logs"
+    model:
+      backbone:
+        name: "Inception3"
+        Inception3:
+          crop_pad: 4
+          pruned: True
+      losses:
+        names: []
+      task_head:
+        name: "DenseboxHead"
+        DenseboxHead:
+          total_stride: 8
+          score_size: 19
+          x_size: &X_SIZE_TEST 303
+          num_conv3x3: &NUM_CONV3x3 2
+          head_conv_bn: [False, False]
+      task_model:
+        name: "SiamAttention2CorrTrack"
+        SiamAttention2CorrTrack:
+          pretrain_model_path: "snapshots/siamfcpp_attention2_corr_finetune_freeze_googlenet-fulldata/epoch-19.pkl"
+          attention_down_num: 3
+          attention_down_k_size: [3, 3, 2]
+          attention_down_stride: [1, 1, 1]
+          attention_up_num: 3
+          attention_up_k_size: [2, 3, 3]
+          attention_up_stride: [1, 1, 1]
+    pipeline:
+      name: "SiamFCppTracker"
+      SiamFCppTracker:
+        test_lr: 0.5093639624865886
+        window_influence: 0.2444928917567117
+        penalty_k: 0.06721247775471334
+        x_size: *X_SIZE_TEST
+        num_conv3x3: *NUM_CONV3x3
+    tester:
+      names: ["VOTTester",]
+      VOTTester:
+        exp_name: *TEST_NAME
+        exp_save: *TEST_SAVE
+        device_num: 1
+        dataset_names: ["VOT2018"]
