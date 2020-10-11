@@ -21,7 +21,7 @@ test:
       task_model:
         name: "SiamSKCorrTrack"
         SiamSKCorrTrack:
-          pretrain_model_path: "snapshots/siamfcpp_sk_k3_corr_finetune_freeze_googlenet-fulldata/epoch-3.pkl"
+          pretrain_model_path: "snapshots/siamfcpp_sk_k3_corr_finetune_freeze_googlenet-fulldata/epoch-19.pkl"
           kernel_num: 3
           discount: 4
     pipeline:
